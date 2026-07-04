@@ -1,6 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import check_password_hash
-from database.db import get_db, init_db, seed_db, get_user_by_email, get_user_by_id, create_user
+from database.db import get_db, init_db, seed_db, get_user_by_email, create_user
+from database.queries import (
+    get_user_by_id,
+    get_summary_stats,
+    get_recent_transactions,
+    get_category_breakdown,
+)
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key-change-in-production"
@@ -87,7 +93,17 @@ def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
     user = get_user_by_id(session["user_id"])
-    return render_template("profile.html", user=user)
+    stats = get_summary_stats(session["user_id"])
+    transactions = get_recent_transactions(session["user_id"])
+    categories = get_category_breakdown(session["user_id"])
+
+    return render_template(
+        "profile.html",
+        user=user,
+        stats=stats,
+        transactions=transactions,
+        categories=categories,
+    )
 
 
 @app.route("/expenses/add")
