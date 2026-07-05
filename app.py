@@ -1,4 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from datetime import datetime, date
+from typing import NamedTuple
+
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash
 from database.db import get_db, init_db, seed_db, get_user_by_email, create_user
 from database.queries import (
@@ -14,6 +17,70 @@ app.secret_key = "dev-secret-key-change-in-production"
 with app.app_context():
     init_db()
     seed_db()
+
+
+# ------------------------------------------------------------------ #
+# Date filter helpers                                                 #
+# ------------------------------------------------------------------ #
+
+class DateRange(NamedTuple):
+    start: str
+    end: str
+
+
+def _parse_date_param(value):
+    if not value:
+        return None
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _shift_year_month(year, month, months_back):
+    index = year * 12 + (month - 1) - months_back
+    return index // 12, index % 12 + 1
+
+
+def _preset_range(months):
+    today = date.today()
+    year, month = _shift_year_month(today.year, today.month, months - 1)
+    start = date(year, month, 1)
+    return DateRange(start.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d"))
+
+
+def resolve_date_filter(args):
+    """Parse/validate date_from & date_to query args and derive the active preset."""
+    date_from = _parse_date_param(args.get("date_from"))
+    date_to = _parse_date_param(args.get("date_to"))
+
+    if not (date_from and date_to):
+        date_from = None
+        date_to = None
+    elif date_from > date_to:
+        flash("Start date must be before end date.")
+        date_from = None
+        date_to = None
+
+    presets = {
+        "this_month": _preset_range(1),
+        "last_3_months": _preset_range(3),
+        "last_6_months": _preset_range(6),
+    }
+
+    if date_from is None and date_to is None:
+        active_preset = "all_time"
+    elif (date_from, date_to) == presets["this_month"]:
+        active_preset = "this_month"
+    elif (date_from, date_to) == presets["last_3_months"]:
+        active_preset = "last_3_months"
+    elif (date_from, date_to) == presets["last_6_months"]:
+        active_preset = "last_6_months"
+    else:
+        active_preset = "custom"
+
+    return date_from, date_to, presets, active_preset
 
 
 # ------------------------------------------------------------------ #
@@ -92,10 +159,20 @@ def logout():
 def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
-    user = get_user_by_id(session["user_id"])
-    stats = get_summary_stats(session["user_id"])
-    transactions = get_recent_transactions(session["user_id"])
-    categories = get_category_breakdown(session["user_id"])
+
+    date_from, date_to, presets, active_preset = resolve_date_filter(request.args)
+
+    user_id = session["user_id"]
+    user = get_user_by_id(user_id)
+    stats = get_summary_stats(
+        user_id, date_from=date_from, date_to=date_to
+    )
+    transactions = get_recent_transactions(
+        user_id, date_from=date_from, date_to=date_to
+    )
+    categories = get_category_breakdown(
+        user_id, date_from=date_from, date_to=date_to
+    )
 
     return render_template(
         "profile.html",
@@ -103,6 +180,10 @@ def profile():
         stats=stats,
         transactions=transactions,
         categories=categories,
+        date_from=date_from,
+        date_to=date_to,
+        presets=presets,
+        active_preset=active_preset,
     )
 
 

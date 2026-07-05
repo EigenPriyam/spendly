@@ -906,3 +906,93 @@ a { color: inherit; text-decoration: none; }
     .category-pct { display: none; }
     .category-name, .category-amount { font-size: 0.8rem; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Flash messages                                                      */
+/* ------------------------------------------------------------------ */
+
+.flash-messages {
+    max-width: var(--max-width);
+    margin: 1rem auto 0;
+    padding: 0 2rem;
+}
+
+.flash-message {
+    background: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid #f5c6c2;
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Profile filter bar                                                  */
+/* ------------------------------------------------------------------ */
+
+.filter-bar {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.preset-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.preset-link {
+    display: inline-block;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 0.5rem 1.1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+}
+
+.preset-link:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+}
+
+.preset-link.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--paper);
+}
+
+.filter-custom-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+.filter-custom-form .form-group {
+    margin-bottom: 0;
+}
+
+.filter-custom-form .form-input {
+    width: auto;
+}
+
+.filter-apply-btn {
+    width: auto;
+    padding: 0.6rem 1.25rem;
+    margin-top: 0;
+}
+
+.filter-apply-btn.active {
+    background: var(--accent);
+}

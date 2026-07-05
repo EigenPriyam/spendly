@@ -3,6 +3,12 @@ from datetime import datetime
 from database.db import get_db
 
 
+def _date_range_clause(date_from, date_to):
+    if date_from and date_to:
+        return " AND date BETWEEN ? AND ?", [date_from, date_to]
+    return "", []
+
+
 def get_user_by_id(user_id):
     conn = get_db()
     row = conn.execute(
@@ -21,18 +27,21 @@ def get_user_by_id(user_id):
     }
 
 
-def get_summary_stats(user_id):
+def get_summary_stats(user_id, date_from=None, date_to=None):
     conn = get_db()
     try:
+        date_filter_sql, extra_params = _date_range_clause(date_from, date_to)
+        params = [user_id, *extra_params]
+
         totals_row = conn.execute(
-            """
+            f"""
             SELECT
                 COALESCE(SUM(amount), 0) AS total_spent,
                 COUNT(*) AS transaction_count
             FROM expenses
-            WHERE user_id = ?
+            WHERE user_id = ?{date_filter_sql}
             """,
-            (user_id,),
+            params,
         ).fetchone()
 
         total_spent = float(totals_row["total_spent"])
@@ -46,15 +55,15 @@ def get_summary_stats(user_id):
             }
 
         top_category_row = conn.execute(
-            """
+            f"""
             SELECT category, SUM(amount) AS category_total
             FROM expenses
-            WHERE user_id = ?
+            WHERE user_id = ?{date_filter_sql}
             GROUP BY category
             ORDER BY category_total DESC
             LIMIT 1
             """,
-            (user_id,),
+            params,
         ).fetchone()
 
         top_category = top_category_row["category"] if top_category_row else "—"
@@ -68,33 +77,39 @@ def get_summary_stats(user_id):
         conn.close()
 
 
-def get_recent_transactions(user_id, limit=10):
+def get_recent_transactions(user_id, limit=10, date_from=None, date_to=None):
     conn = get_db()
+    date_filter_sql, extra_params = _date_range_clause(date_from, date_to)
+    params = [user_id, *extra_params, limit]
+
     rows = conn.execute(
-        """
+        f"""
         SELECT date, description, category, amount
         FROM expenses
-        WHERE user_id = ?
+        WHERE user_id = ?{date_filter_sql}
         ORDER BY date DESC, id DESC
         LIMIT ?
         """,
-        (user_id, limit),
+        params,
     ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
 
-def get_category_breakdown(user_id):
+def get_category_breakdown(user_id, date_from=None, date_to=None):
     conn = get_db()
+    date_filter_sql, extra_params = _date_range_clause(date_from, date_to)
+    params = [user_id, *extra_params]
+
     rows = conn.execute(
-        """
+        f"""
         SELECT category, SUM(amount) AS total
         FROM expenses
-        WHERE user_id = ?
+        WHERE user_id = ?{date_filter_sql}
         GROUP BY category
         ORDER BY total DESC
         """,
-        (user_id,),
+        params,
     ).fetchall()
     conn.close()
 
