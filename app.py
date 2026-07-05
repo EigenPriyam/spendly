@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, date
 from typing import NamedTuple
 
@@ -9,6 +10,7 @@ from database.queries import (
     get_summary_stats,
     get_recent_transactions,
     get_category_breakdown,
+    create_expense,
 )
 
 app = Flask(__name__)
@@ -81,6 +83,13 @@ def resolve_date_filter(args):
         active_preset = "custom"
 
     return date_from, date_to, presets, active_preset
+
+
+# ------------------------------------------------------------------ #
+# Expense validation                                                  #
+# ------------------------------------------------------------------ #
+
+EXPENSE_CATEGORIES = ["Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other"]
 
 
 # ------------------------------------------------------------------ #
@@ -187,9 +196,51 @@ def profile():
     )
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        amount_raw = request.form.get("amount", "").strip()
+        category = request.form.get("category", "").strip()
+        expense_date = request.form.get("date", "").strip()
+        description = request.form.get("description", "").strip()
+
+        error = None
+        amount = None
+
+        if not amount_raw or not category or not expense_date:
+            error = "Amount, category, and date are required."
+        else:
+            try:
+                amount = float(amount_raw)
+            except ValueError:
+                amount = None
+
+            if amount is None or math.isnan(amount) or math.isinf(amount) or amount <= 0:
+                error = "Amount must be a positive number."
+            elif category not in EXPENSE_CATEGORIES:
+                error = "Please select a valid category."
+            elif not _parse_date_param(expense_date):
+                error = "Please enter a valid date."
+
+        if error:
+            return render_template(
+                "add_expense.html",
+                error=error,
+                categories=EXPENSE_CATEGORIES,
+                amount=amount_raw,
+                category=category,
+                date=expense_date,
+                description=description,
+            )
+
+        create_expense(session["user_id"], amount, category, expense_date, description or None)
+        flash("Expense added successfully.")
+        return redirect(url_for("profile"))
+
+    return render_template("add_expense.html", categories=EXPENSE_CATEGORIES)
 
 
 @app.route("/expenses/<int:id>/edit")
