@@ -49,6 +49,38 @@
             </div>
         </div>
 
+        <!-- Date filter -->
+        <div class="filter-bar">
+            <div class="preset-links">
+                <a href="{{ url_for('profile', date_from=presets.this_month.start, date_to=presets.this_month.end) }}"
+                   class="preset-link {% if active_preset == 'this_month' %}active{% endif %}">This Month</a>
+                <a href="{{ url_for('profile', date_from=presets.last_3_months.start, date_to=presets.last_3_months.end) }}"
+                   class="preset-link {% if active_preset == 'last_3_months' %}active{% endif %}">Last 3 Months</a>
+                <a href="{{ url_for('profile', date_from=presets.last_6_months.start, date_to=presets.last_6_months.end) }}"
+                   class="preset-link {% if active_preset == 'last_6_months' %}active{% endif %}">Last 6 Months</a>
+                <a href="{{ url_for('profile') }}"
+                   class="preset-link {% if active_preset == 'all_time' %}active{% endif %}">All Time</a>
+            </div>
+
+            <form method="GET" action="{{ url_for('profile') }}" class="filter-custom-form">
+                <div class="form-group">
+                    <label for="date_from">From</label>
+                    <input type="date" id="date_from" name="date_from" class="form-input"
+                           value="{{ date_from or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="date_to">To</label>
+                    <input type="date" id="date_to" name="date_to" class="form-input"
+                           value="{{ date_to or '' }}">
+                </div>
+                <button type="submit"
+                        class="btn-submit filter-apply-btn
+                               {%- if active_preset == 'custom' %} active{% endif %}">
+                    Apply
+                </button>
+            </form>
+        </div>
+
         <!-- Recent transactions -->
         <div class="dashboard-card">
             <h2 class="dashboard-card-title">Recent transactions</h2>
